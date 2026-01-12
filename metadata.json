@@ -1,0 +1,7 @@
+{
+  "name": "Kingfa Lucky Draw 2025",
+  "description": "A festive, high-performance lucky draw application for Kingfa Science & Technology's Information Management Department, featuring dynamic animations, sound effects, and secure winner management.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
