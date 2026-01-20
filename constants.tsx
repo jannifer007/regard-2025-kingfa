@@ -145,7 +145,7 @@ export const STAFF_LIST: Staff[] = [
 ;
 
 export const PRIZES: PrizeConfig[] = [
-  { type: PrizeType.THIRD, total: 7, remaining: 7, color: 'from-orange-400 to-orange-600', batchSize: 4 },
+  { type: PrizeType.THIRD, total: 8, remaining: 8, color: 'from-orange-400 to-orange-600', batchSize: 4 },
   { type: PrizeType.SECOND, total: 6, remaining: 6, color: 'from-blue-400 to-indigo-600', batchSize: 3 },
   { type: PrizeType.FIRST, total: 3, remaining: 3, color: 'from-yellow-400 to-red-600', batchSize: 1 },
 ];
