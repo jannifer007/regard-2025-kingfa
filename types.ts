@@ -2,6 +2,7 @@
 export interface Staff {
   id: string;    // 工号
   name: string;  // 姓名
+  department: string; // 科室
 }
 
 export enum PrizeType {
@@ -21,4 +22,5 @@ export interface PrizeConfig {
   total: number;
   remaining: number;
   color: string;
+  batchSize: number; // Number of winners to draw in one go
 }

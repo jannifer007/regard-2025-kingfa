@@ -2,40 +2,50 @@
 import React, { useMemo } from 'react';
 
 const Background: React.FC = () => {
-  const particles = useMemo(() => Array.from({ length: 40 }).map((_, i) => ({
+  // Reduced particle count for a cleaner, simpler look
+  const particles = useMemo(() => Array.from({ length: 25 }).map((_, i) => ({
     id: i,
     left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    duration: `${8 + Math.random() * 12}s`,
-    delay: `${Math.random() * 5}s`,
-    size: `${Math.random() * 15 + 5}px`
+    top: `${Math.random() * 120}%`,
+    duration: `${20 + Math.random() * 15}s`, // Slower movement
+    delay: `-${Math.random() * 20}s`,
+    size: `${Math.random() * 6 + 2}px`,
+    opacity: 0.1 + Math.random() * 0.3
   })), []);
 
   return (
     <div className="fixed inset-0 z-0 bg-[#700000] overflow-hidden">
-      {/* Texture Layer */}
-      <div className="absolute inset-0 opacity-5 animate-bg" style={{
-        backgroundImage: 'radial-gradient(circle, #FFD700 1px, transparent 1px)',
-        backgroundSize: '40px 40px'
-      }} />
+      {/* Subtle Gradient Background - Static to reduce noise */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#600000] via-[#800000] to-[#500000]" />
       
-      {/* Subtle Glowing Particles */}
+      {/* Static texture overlay instead of moving stripes */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+           style={{
+             backgroundImage: 'radial-gradient(circle, #FFD700 1px, transparent 1px)',
+             backgroundSize: '40px 40px'
+           }} 
+      />
+
+      {/* Floating Particles - Fewer and slower */}
       {particles.map((p) => (
         <div
           key={p.id}
-          className="absolute rounded-full bg-yellow-500/10 blur-md animate-pulse"
+          className="absolute rounded-full bg-yellow-400 blur-[1px] pointer-events-none"
           style={{
             left: p.left,
             top: p.top,
             width: p.size,
             height: p.size,
-            animationDuration: p.duration,
-            animationDelay: p.delay
+            opacity: p.opacity,
+            animation: `floatUp ${p.duration} linear infinite`
           }}
         />
       ))}
 
-      {/* Corporate Branding - Scaled down for better balance */}
+      {/* Simple Spotlight - Static */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,215,0,0.08),transparent_70%)] pointer-events-none" />
+
+      {/* Corporate Branding */}
       <div className="absolute top-6 left-8 flex items-center gap-2 z-20">
          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md border border-yellow-500">
             <span className="text-[#8B0000] font-bold text-base">金发</span>
@@ -46,12 +56,28 @@ const Background: React.FC = () => {
          </div>
       </div>
 
-      {/* Centered Background Text - Better balance and centering */}
+      {/* Background Text - Very slow, subtle sway */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-        <div className="text-yellow-500/[0.03] text-[18vw] font-black italic select-none whitespace-nowrap leading-none tracking-tighter transform rotate-[-10deg]">
+        <div className="text-yellow-500/[0.04] text-[18vw] font-black italic select-none whitespace-nowrap leading-none tracking-tighter transform rotate-[-10deg] animate-sway-slow">
           LUCKY 2025
         </div>
       </div>
+
+      <style>{`
+        @keyframes floatUp {
+          0% { transform: translateY(0); opacity: 0; }
+          20% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { transform: translateY(-100vh); opacity: 0; }
+        }
+        @keyframes sway {
+          0%, 100% { transform: rotate(-10deg) scale(1); }
+          50% { transform: rotate(-8deg) scale(1.02); }
+        }
+        .animate-sway-slow {
+          animation: sway 12s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 };
