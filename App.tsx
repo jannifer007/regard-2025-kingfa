@@ -22,6 +22,9 @@ const App: React.FC = () => {
     [PrizeType.THIRD]: []
   });
 
+  // Derived constants
+  const ALL_DEPTS = useMemo(() => Array.from(new Set(STAFF_LIST.map(s => s.department))), []);
+
   const scrollIntervalRef = useRef<number | null>(null);
 
   // Keyboard shortcut for Settings (Ctrl + Shift + S)
@@ -90,7 +93,6 @@ const App: React.FC = () => {
     // Prepare specified winners for this round
     const specifiedIds = rigConfig[currentPrizeType] || [];
     // Find specified staff who are still eligible (haven't won yet)
-    // We keep them in order of specification
     const availableRiggedStaff = specifiedIds
         .map(id => tempStaff.find(s => s.id === id))
         .filter((s): s is Staff => !!s);
@@ -98,42 +100,68 @@ const App: React.FC = () => {
     for (let i = 0; i < countToDraw; i++) {
         let winnerStaff: Staff | null = null;
 
-        // 1. Priority: Check if we have a specified winner to use
+        // --- 1. Rigging Priority ---
+        // Rigging overrides all department constraints
         if (availableRiggedStaff.length > 0) {
-            // First try to find a rigged candidate that doesn't violate the department rule
+            // First try to find a rigged candidate that doesn't violate the *batch* rule (just for aesthetics)
             const validRigged = availableRiggedStaff.find(s => !currentBatchDepartments.has(s.department));
-            
-            if (validRigged) {
-                winnerStaff = validRigged;
-            } else {
-                // If all remaining rigged candidates violate the rule, we force the first one anyway
-                // (User intent overrides department rule)
-                winnerStaff = availableRiggedStaff[0];
-            }
+            winnerStaff = validRigged || availableRiggedStaff[0];
 
-            // Remove used rigged candidate from our local list so we don't pick them twice
+            // Remove used rigged candidate
             const idx = availableRiggedStaff.indexOf(winnerStaff);
             if (idx > -1) availableRiggedStaff.splice(idx, 1);
         }
 
-        // 2. Fallback: If no rigged winner selected, use normal logic
+        // --- 2. Random Selection with Constraints ---
         if (!winnerStaff) {
-             // Filter candidates: Must NOT be from a department already in this batch
-            let eligibleCandidates = tempStaff.filter(s => !currentBatchDepartments.has(s.department));
+             let candidatePool = [...tempStaff];
 
-            // Fallback: If no eligible candidates (impossible to satisfy unique dept rule),
-            // pick from anyone remaining.
-            if (eligibleCandidates.length === 0) {
-                eligibleCandidates = tempStaff;
-            }
-            
-            if (eligibleCandidates.length > 0) {
-                const randomIndex = Math.floor(Math.random() * eligibleCandidates.length);
-                winnerStaff = eligibleCandidates[randomIndex];
-            }
+             // Constraint A: First Prize - Max 1 per Department
+             if (currentPrizeType === PrizeType.FIRST) {
+                const existingFirstPrizeDepts = new Set([
+                    ...winners.filter(w => w.prize === PrizeType.FIRST).map(w => w.staff.department),
+                    ...newWinners.filter(w => w.prize === PrizeType.FIRST).map(w => w.staff.department)
+                ]);
+                
+                const filtered = candidatePool.filter(s => !existingFirstPrizeDepts.has(s.department));
+                // Only apply if we don't filter out everyone (safety net, though unlikely with data size)
+                if (filtered.length > 0) {
+                    candidatePool = filtered;
+                }
+             }
+
+             // Constraint B: Second/Third Prize - Ensure Full Department Coverage
+             // "每个科室一定要有人抽到二等三等奖"
+             if (currentPrizeType === PrizeType.SECOND || currentPrizeType === PrizeType.THIRD) {
+                 const lowTierWinnerDepts = new Set([
+                     ...winners.filter(w => w.prize === PrizeType.SECOND || w.prize === PrizeType.THIRD).map(w => w.staff.department),
+                     ...newWinners.filter(w => w.prize === PrizeType.SECOND || w.prize === PrizeType.THIRD).map(w => w.staff.department)
+                 ]);
+                 
+                 const unluckyDepts = ALL_DEPTS.filter(d => !lowTierWinnerDepts.has(d));
+                 
+                 // If there are departments that haven't won 2nd/3rd yet, we MUST prioritize them
+                 if (unluckyDepts.length > 0) {
+                     const priorityPool = candidatePool.filter(s => unluckyDepts.includes(s.department));
+                     if (priorityPool.length > 0) {
+                         candidatePool = priorityPool;
+                     }
+                 }
+             }
+
+             // Soft Constraint C: Batch Diversity (Avoid same dept in single batch)
+             const diversePool = candidatePool.filter(s => !currentBatchDepartments.has(s.department));
+             if (diversePool.length > 0) {
+                 candidatePool = diversePool;
+             }
+
+             if (candidatePool.length > 0) {
+                const randomIndex = Math.floor(Math.random() * candidatePool.length);
+                winnerStaff = candidatePool[randomIndex];
+             }
         }
 
-        if (!winnerStaff) break; // Should only happen if tempStaff is empty
+        if (!winnerStaff) break; 
 
         newWinners.push({
             staff: winnerStaff,
@@ -141,10 +169,7 @@ const App: React.FC = () => {
             timestamp: Date.now() + i
         });
         
-        // Mark department as used for this batch
         currentBatchDepartments.add(winnerStaff.department);
-
-        // Remove winner from the temp pool so they aren't picked again
         tempStaff = tempStaff.filter(s => s.id !== winnerStaff.id);
     }
 
@@ -152,13 +177,12 @@ const App: React.FC = () => {
     setRemainingStaff(tempStaff);
     setLastWinners(newWinners);
     audioService.playWin();
-  }, [isDrawing, remainingStaff, currentPrizeType, currentPrizeConfig, rigConfig]);
+  }, [isDrawing, remainingStaff, currentPrizeType, currentPrizeConfig, rigConfig, winners, ALL_DEPTS]);
 
   // Spacebar Control for Operations
   useEffect(() => {
     const handleSpaceKey = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
-        // Prevent triggering when typing in settings inputs
         const activeElement = document.activeElement;
         if (activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA') {
           return;
@@ -166,10 +190,10 @@ const App: React.FC = () => {
 
         e.preventDefault();
 
-        if (showSettings) return; // Do not control settings modal with space
+        if (showSettings) return; 
 
         if (showSummary) {
-          setShowSummary(false); // Space closes the summary view to return to draw
+          setShowSummary(false); 
           return;
         }
 
@@ -386,85 +410,12 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Full Screen Summary View */}
-      {showSummary && (
-        <div className="fixed inset-0 z-50 bg-[#700000] flex flex-col p-8 animate-fadeIn">
-             <div className="absolute inset-0 bg-gradient-to-br from-[#500000] to-[#800000] z-0" />
-             <div className="absolute inset-0 z-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #FFD700 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-             
-             <div className="relative z-10 flex flex-col h-full max-w-7xl mx-auto w-full">
-                 {/* Header */}
-                 <div className="flex justify-between items-center mb-10 pb-4 border-b border-yellow-500/30">
-                     <div className="flex items-center gap-4">
-                         <h1 className="festive-font text-5xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 drop-shadow-sm">
-                             2025 荣耀榜
-                         </h1>
-                         <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest border border-yellow-500/40">WINNERS LIST</span>
-                     </div>
-                     <button 
-                        onClick={() => setShowSummary(false)}
-                        className="px-6 py-2 rounded-full border border-yellow-500/50 text-yellow-500 hover:bg-yellow-500 hover:text-red-900 transition-colors font-bold tracking-widest uppercase text-sm"
-                     >
-                        返回抽奖 (Space)
-                     </button>
-                 </div>
-
-                 {/* Content */}
-                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-8 overflow-y-auto pb-10 pr-2 custom-scrollbar">
-                     {[PrizeType.FIRST, PrizeType.SECOND, PrizeType.THIRD].map((type) => {
-                         const typeWinners = winners.filter(w => w.prize === type).sort((a, b) => a.timestamp - b.timestamp);
-                         const config = prizeConfigs.find(p => p.type === type);
-                         
-                         return (
-                             <div key={type} className="flex flex-col gap-4">
-                                 <div className={`p-4 rounded-xl flex items-center justify-between shadow-lg ${
-                                      type === PrizeType.FIRST ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-red-950' :
-                                      type === PrizeType.SECOND ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white' :
-                                      'bg-gradient-to-r from-orange-500 to-red-600 text-white'
-                                 }`}>
-                                     <h2 className="text-2xl font-black tracking-tighter">{type}</h2>
-                                     <span className="text-sm font-bold opacity-80 bg-black/10 px-2 py-0.5 rounded">{typeWinners.length} / {config?.total}</span>
-                                 </div>
-
-                                 <div className="grid grid-cols-1 gap-2">
-                                     {typeWinners.map((w, idx) => (
-                                         <div key={idx} className="bg-white/5 border border-white/10 p-3 rounded-lg flex items-center justify-between backdrop-blur-sm hover:bg-white/10 transition-colors">
-                                             <div className="flex items-center gap-3">
-                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                                                      type === PrizeType.FIRST ? 'bg-yellow-500 text-red-900' : 'bg-white/10 text-white'
-                                                 }`}>
-                                                     {idx + 1}
-                                                 </div>
-                                                 <div>
-                                                     <div className="text-lg font-bold text-white leading-none">{w.staff.name}</div>
-                                                     <div className="text-xs text-white/40 font-mono mt-0.5">{w.staff.id}</div>
-                                                 </div>
-                                             </div>
-                                             <div className="text-xs font-medium text-white/60 bg-black/20 px-2 py-1 rounded">
-                                                 {w.staff.department}
-                                             </div>
-                                         </div>
-                                     ))}
-                                     {typeWinners.length === 0 && (
-                                         <div className="h-32 rounded-lg border-2 border-dashed border-white/5 flex items-center justify-center text-white/10 font-bold uppercase tracking-widest">
-                                             暂无获奖者
-                                         </div>
-                                     )}
-                                 </div>
-                             </div>
-                         )
-                     })}
-                 </div>
-             </div>
-        </div>
-      )}
-
       {/* Hidden Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center backdrop-blur-sm">
           <div className="bg-white text-black p-8 rounded-xl w-full max-w-lg shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Settingss (Rigging)</h2>
+              <h2 className="text-2xl font-bold text-gray-800">Settings (Rigging)</h2>
               <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-black">
                 ✕
               </button>
