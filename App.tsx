@@ -22,6 +22,8 @@ const App: React.FC = () => {
     [PrizeType.THIRD]: []
   });
 
+  const hasAutoShownSummaryRef = useRef(false);
+
   // Derived constants
   const ALL_DEPTS = useMemo(() => Array.from(new Set(STAFF_LIST.map(s => s.department))), []);
 
@@ -54,6 +56,17 @@ const App: React.FC = () => {
       setRollingIds(remainingStaff.slice(0, 20));
     }
   }, [remainingStaff, isDrawing, rollingIds.length]);
+
+  // Auto-show summary when lottery ends
+  useEffect(() => {
+    if (isLotteryOver && !showSummary && lastWinners.length > 0 && !hasAutoShownSummaryRef.current) {
+      const timer = setTimeout(() => {
+        setShowSummary(true);
+        hasAutoShownSummaryRef.current = true;
+      }, 2500); // 2.5s delay to let the winner celebration sink in
+      return () => clearTimeout(timer);
+    }
+  }, [isLotteryOver, showSummary, lastWinners]);
 
   const startDraw = useCallback(() => {
     if (currentPrizeConfig.remaining <= 0) {
@@ -200,14 +213,19 @@ const App: React.FC = () => {
         if (isDrawing) {
           stopDraw();
         } else {
-          startDraw();
+          // If lottery is fully over, Space opens summary
+          if (isLotteryOver) {
+             setShowSummary(true);
+          } else {
+             startDraw();
+          }
         }
       }
     };
 
     window.addEventListener('keydown', handleSpaceKey);
     return () => window.removeEventListener('keydown', handleSpaceKey);
-  }, [isDrawing, showSettings, showSummary, startDraw, stopDraw]);
+  }, [isDrawing, showSettings, showSummary, startDraw, stopDraw, isLotteryOver]);
 
   const resetAll = () => {
     if (window.confirm('确定要重置所有抽奖数据吗？')) {
@@ -217,6 +235,7 @@ const App: React.FC = () => {
       setCurrentPrizeType(PrizeType.THIRD);
       setRollingIds(STAFF_LIST.slice(0, 20));
       setShowSummary(false);
+      hasAutoShownSummaryRef.current = false;
     }
   };
 
@@ -334,24 +353,28 @@ const App: React.FC = () => {
 
           {/* Main Button */}
           <button
-            onClick={isDrawing ? stopDraw : startDraw}
-            disabled={!isDrawing && currentPrizeConfig.remaining <= 0}
+            onClick={isDrawing ? stopDraw : (isLotteryOver ? () => setShowSummary(true) : startDraw)}
+            disabled={!isDrawing && !isLotteryOver && currentPrizeConfig.remaining <= 0}
             className={`mt-10 group relative px-14 py-5 rounded-full font-black text-2xl tracking-[0.2em] transition-all duration-300 transform active:scale-95 shadow-xl ${
               isDrawing 
               ? 'bg-yellow-400 text-red-950 animate-pulse' 
-              : 'bg-yellow-500 text-red-950 hover:bg-yellow-400 hover:-translate-y-1'
+              : (isLotteryOver ? 'bg-gradient-to-r from-yellow-300 to-yellow-500 text-red-900 scale-105 animate-pulse' : 'bg-yellow-500 text-red-950 hover:bg-yellow-400 hover:-translate-y-1')
             } disabled:opacity-30 disabled:cursor-not-allowed`}
           >
-            <span className="relative z-10">{isDrawing ? '停止 (Space)' : '开始抽奖 (Space)'}</span>
+            <span className="relative z-10">
+                {isDrawing ? '停止 (Space)' : (isLotteryOver ? '查看大屏名单 (Space)' : '开始抽奖 (Space)')}
+            </span>
           </button>
           
-           {/* Summary Button */}
-          <button 
-             onClick={() => setShowSummary(true)}
-             className={`mt-4 text-sm text-yellow-500/60 hover:text-yellow-400 uppercase tracking-widest font-bold border-b border-transparent hover:border-yellow-400 transition-all ${isLotteryOver ? 'text-yellow-400 scale-125 font-black animate-pulse' : ''}`}
-          >
-            {isLotteryOver ? '✨ 查看大屏名单 ✨' : '查看总名单'}
-          </button>
+           {/* Secondary Summary Button (kept as backup, hidden if lottery over to avoid redundancy, or kept for consistency) */}
+           {!isLotteryOver && (
+            <button 
+               onClick={() => setShowSummary(true)}
+               className="mt-4 text-sm text-yellow-500/60 hover:text-yellow-400 uppercase tracking-widest font-bold border-b border-transparent hover:border-yellow-400 transition-all"
+            >
+              查看总名单
+            </button>
+           )}
 
         </div>
 
@@ -409,6 +432,79 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Full Screen Summary View */}
+      {showSummary && (
+        <div className="fixed inset-0 z-50 bg-[#700000] flex flex-col p-8 animate-fadeIn">
+             <div className="absolute inset-0 bg-gradient-to-br from-[#500000] to-[#800000] z-0" />
+             <div className="absolute inset-0 z-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #FFD700 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+             
+             <div className="relative z-10 flex flex-col h-full max-w-7xl mx-auto w-full">
+                 {/* Header */}
+                 <div className="flex justify-between items-center mb-10 pb-4 border-b border-yellow-500/30">
+                     <div className="flex items-center gap-4">
+                         <h1 className="festive-font text-5xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 drop-shadow-sm">
+                             2025 荣耀榜
+                         </h1>
+                         <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest border border-yellow-500/40">WINNERS LIST</span>
+                     </div>
+                     <button 
+                        onClick={() => setShowSummary(false)}
+                        className="px-6 py-2 rounded-full border border-yellow-500/50 text-yellow-500 hover:bg-yellow-500 hover:text-red-900 transition-colors font-bold tracking-widest uppercase text-sm"
+                     >
+                        返回抽奖 (Space)
+                     </button>
+                 </div>
+
+                 {/* Content */}
+                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-8 overflow-y-auto pb-10 pr-2 custom-scrollbar">
+                     {[PrizeType.FIRST, PrizeType.SECOND, PrizeType.THIRD].map((type) => {
+                         const typeWinners = winners.filter(w => w.prize === type).sort((a, b) => a.timestamp - b.timestamp);
+                         const config = prizeConfigs.find(p => p.type === type);
+                         
+                         return (
+                             <div key={type} className="flex flex-col gap-4">
+                                 <div className={`p-4 rounded-xl flex items-center justify-between shadow-lg ${
+                                      type === PrizeType.FIRST ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-red-950' :
+                                      type === PrizeType.SECOND ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white' :
+                                      'bg-gradient-to-r from-orange-500 to-red-600 text-white'
+                                 }`}>
+                                     <h2 className="text-2xl font-black tracking-tighter">{type}</h2>
+                                     <span className="text-sm font-bold opacity-80 bg-black/10 px-2 py-0.5 rounded">{typeWinners.length} / {config?.total}</span>
+                                 </div>
+
+                                 <div className="grid grid-cols-1 gap-2">
+                                     {typeWinners.map((w, idx) => (
+                                         <div key={idx} className="bg-white/5 border border-white/10 p-3 rounded-lg flex items-center justify-between backdrop-blur-sm hover:bg-white/10 transition-colors">
+                                             <div className="flex items-center gap-3">
+                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                                                      type === PrizeType.FIRST ? 'bg-yellow-500 text-red-900' : 'bg-white/10 text-white'
+                                                 }`}>
+                                                     {idx + 1}
+                                                 </div>
+                                                 <div>
+                                                     <div className="text-lg font-bold text-white leading-none">{w.staff.name}</div>
+                                                     <div className="text-xs text-white/40 font-mono mt-0.5">{w.staff.id}</div>
+                                                 </div>
+                                             </div>
+                                             <div className="text-xs font-medium text-white/60 bg-black/20 px-2 py-1 rounded">
+                                                 {w.staff.department}
+                                             </div>
+                                         </div>
+                                     ))}
+                                     {typeWinners.length === 0 && (
+                                         <div className="h-32 rounded-lg border-2 border-dashed border-white/5 flex items-center justify-center text-white/10 font-bold uppercase tracking-widest">
+                                             暂无获奖者
+                                         </div>
+                                     )}
+                                 </div>
+                             </div>
+                         )
+                     })}
+                 </div>
+             </div>
+        </div>
+      )}
 
       {/* Hidden Settings Modal */}
       {showSettings && (
