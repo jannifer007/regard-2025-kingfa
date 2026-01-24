@@ -143,7 +143,7 @@ export const PRIZES: PrizeConfig[] = [
     remaining: 3, 
     batchSize: 1, 
     color: 'from-yellow-400 to-red-600', 
-    imageUrl: '/public/images/hb.jpg' 
+    imageUrl: '/images/hb.jpg' 
   },
   
   // First Prize A (Total 3, Batch 3) - Toothbrush
@@ -155,7 +155,7 @@ export const PRIZES: PrizeConfig[] = [
     remaining: 3, 
     batchSize: 3, 
     color: 'from-purple-400 to-purple-600', 
-    imageUrl: 'https://images.unsplash.com/photo-1553557993-d02167d337d2?q=80&w=600&auto=format&fit=crop' 
+    imageUrl: '/images/ys.jpg' 
   },
   // First Prize B (Total 3, Batch 3) - Microwave
   { 
@@ -166,7 +166,7 @@ export const PRIZES: PrizeConfig[] = [
     remaining: 3, 
     batchSize: 3, 
     color: 'from-purple-400 to-purple-600', 
-    imageUrl: 'https://images.unsplash.com/photo-1585659722983-3a675bad4272?q=80&w=600&auto=format&fit=crop' 
+    imageUrl: '/images/wbl.jpg' 
   },
 
   // Second Prize A (Total 6, Batch 6) - Health Pot
@@ -178,7 +178,7 @@ export const PRIZES: PrizeConfig[] = [
     remaining: 6, 
     batchSize: 6, 
     color: 'from-blue-400 to-indigo-600', 
-    imageUrl: 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?q=80&w=600&auto=format&fit=crop' 
+    imageUrl: '/images/ysh.jpg' 
   },
   // Second Prize B (Total 6, Batch 6) - Gamepad
   { 
@@ -189,7 +189,7 @@ export const PRIZES: PrizeConfig[] = [
     remaining: 6, 
     batchSize: 6, 
     color: 'from-blue-400 to-indigo-600', 
-    imageUrl: 'https://images.unsplash.com/photo-1593118247619-e2d6f056869e?q=80&w=600&auto=format&fit=crop' 
+    imageUrl: '/images/sb.jpg' 
   },
 
   // Third Prize A (Total 7, Batch 7) - Cushion
@@ -201,7 +201,7 @@ export const PRIZES: PrizeConfig[] = [
     remaining: 7, 
     batchSize: 7, 
     color: 'from-orange-400 to-orange-600', 
-    imageUrl: 'https://images.unsplash.com/photo-1588710929895-6ee6a0a03975?q=80&w=600&auto=format&fit=crop' 
+    imageUrl: '/images/yk.jpg' 
   },
   // Third Prize B (Total 9, Batch 9) - Stew Pot
   { 
@@ -212,6 +212,6 @@ export const PRIZES: PrizeConfig[] = [
     remaining: 9, 
     batchSize: 9, 
     color: 'from-orange-400 to-orange-600', 
-    imageUrl: 'https://images.unsplash.com/photo-1544233726-9f1d2b27be8b?q=80&w=600&auto=format&fit=crop' 
+    imageUrl: '/images/ddg.jpg' 
   },
 ];
