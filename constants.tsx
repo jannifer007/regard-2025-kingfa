@@ -143,7 +143,7 @@ export const PRIZES: PrizeConfig[] = [
     remaining: 3, 
     batchSize: 1, 
     color: 'from-yellow-400 to-red-600', 
-    imageUrl: 'https://images.unsplash.com/photo-1589705232231-15877f240401?q=80&w=600&auto=format&fit=crop' 
+    imageUrl: '/public/images/hb.jpg' 
   },
   
   // First Prize A (Total 3, Batch 3) - Toothbrush
