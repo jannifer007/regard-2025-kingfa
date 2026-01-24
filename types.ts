@@ -6,6 +6,7 @@ export interface Staff {
 }
 
 export enum PrizeType {
+  GRAND = '特等奖',
   FIRST = '一等奖',
   SECOND = '二等奖',
   THIRD = '三等奖'
@@ -14,13 +15,17 @@ export enum PrizeType {
 export interface Winner {
   staff: Staff;
   prize: PrizeType;
+  subPrizeName: string;
   timestamp: number;
 }
 
 export interface PrizeConfig {
+  id: string;
   type: PrizeType;
+  subName: string;
   total: number;
   remaining: number;
   color: string;
-  batchSize: number; // Number of winners to draw in one go
+  batchSize: number;
+  imageUrl: string;
 }
